@@ -53,7 +53,7 @@ try {
     await context.close();
   }
   const page = await browser.newPage();
-  await page.route('**/model.glb', route => route.abort());
+  await page.route('**/model.glb*', route => route.abort());
   await page.goto(url);
   await page.locator('#retry').waitFor({ state: 'visible', timeout: 30000 });
   assert.equal(await page.locator('#home').isDisabled(), true);

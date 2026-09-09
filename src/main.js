@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { loadModelBytes } from './model-cache.js';
+import modelInfo from '../model-info.json';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app');
@@ -18,11 +20,6 @@ function failure(message) {
   $('progress').hidden = true;
   $('retry').hidden = false;
   buttons.forEach((button) => { button.disabled = true; });
-}
-function notify(message) {
-  $('toast').textContent = message;
-  $('toast').hidden = false;
-  setTimeout(() => { $('toast').hidden = true; }, 3500);
 }
 const dialog = $('share-dialog');
 $('share').addEventListener('click', () => dialog.showModal());
@@ -130,26 +127,50 @@ function startViewer() {
     dirty = true;
   });
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-  loader.load(`${import.meta.env.BASE_URL}model.glb`, (gltf) => {
+  const timing = { source: null, readMs: null, parseMs: null, firstRenderMs: null, cacheSaved: false };
+  const loadStarted = performance.now();
+  loadModelBytes({
+    url: `${import.meta.env.BASE_URL}model.glb`,
+    sha256: modelInfo.web.sha256,
+    byteLength: modelInfo.web.bytes,
+    onStatus: ({ phase, loaded, total }) => {
+      if (phase === 'cached') {
+        $('loading-title').textContent = '正在读取已保存的院落';
+        $('loading-detail').textContent = '这次不用重新下载模型。';
+        $('progress').removeAttribute('value');
+      } else {
+        $('loading-title').textContent = '正在下载院落';
+        const percent = Math.round(loaded / total * 100);
+        $('progress').value = percent;
+        $('loading-detail').textContent = `已下载 ${percent}% · 完成后将尝试保存在此浏览器`;
+      }
+    },
+  }).then(async ({ data, source, readMs, cacheWrite }) => {
+    timing.source = source; timing.readMs = readMs;
+    cacheWrite.then(saved => { timing.cacheSaved = saved; });
+    $('loading-title').textContent = '正在展开房屋与院落';
+    $('loading-detail').textContent = source === 'local-cache' ? '模型已从本地读取，正在准备画面。' : '下载完成，正在准备画面。';
+    $('progress').removeAttribute('value');
+    // Let the new loading phase paint before parsing and uploading textures.
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const parseStarted = performance.now();
+    const gltf = await loader.parseAsync(data, new URL(import.meta.env.BASE_URL, location.href).href);
+    timing.parseMs = performance.now() - parseStarted;
     const model = gltf.scene;
     scene.add(model);
     const bounds = new THREE.Box3().setFromObject(model);
     size = bounds.getSize(new THREE.Vector3());
     center = bounds.getCenter(new THREE.Vector3());
     ready = true; fit();
+    renderer.render(scene, camera);
+    timing.firstRenderMs = performance.now() - loadStarted;
     loading.hidden = true;
     buttons.forEach((button) => { button.disabled = false; });
     app.dataset.loaded = 'true';
     app.dataset.triangles = String(renderer.info.render.triangles);
     // Read-only diagnostics for publication checks.
-    window.viewerDiagnostics = () => ({ loaded: ready, triangles: renderer.info.render.triangles, calls: renderer.info.render.calls, camera: camera.position.toArray(), target: controls.target.toArray(), bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() }, autoRotate: controls.autoRotate });
-  }, (event) => {
-    if (event.total) {
-      const percent = Math.round(event.loaded / event.total * 100);
-      $('progress').value = percent;
-      $('loading-detail').textContent = percent === 100 ? '正在展开房屋与院落…' : `已加载 ${percent}% · 首次打开请稍候`;
-    }
-  }, (error) => { console.error(error); failure('模型下载失败，请检查网络连接后重试。'); });
+    window.viewerDiagnostics = () => ({ loaded: ready, triangles: renderer.info.render.triangles, calls: renderer.info.render.calls, camera: camera.position.toArray(), target: controls.target.toArray(), bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() }, autoRotate: controls.autoRotate, timing: { ...timing } });
+  }).catch((error) => { console.error(error); failure('模型加载失败，请检查网络连接后重试。'); });
   renderer.setAnimationLoop((time) => {
     if (document.hidden) return;
     const delta = Math.min((time - lastFrame) / 1000, 0.05); lastFrame = time;
