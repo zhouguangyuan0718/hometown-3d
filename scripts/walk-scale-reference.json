@@ -1,0 +1,15 @@
+{
+  "referenceObjects": [
+    "v13_旧蓝门板_01",
+    "v13_旧蓝门板_02",
+    "v13_旧蓝门板_03",
+    "v13_旧蓝门板_04",
+    "v13_旧蓝门板_05",
+    "v13_旧蓝门板_06"
+  ],
+  "referenceHeightMeters": 1.8,
+  "referenceHeightUnits": 3.0700000524520874,
+  "reference": "历史 v42 下院蓝门六块门板；v43 修改门板后仍沿用此标定",
+  "referenceModelName": "老家_院门净高与旧木构修正_v42.glb",
+  "referenceModelSha256": "ff6ac2a452e7e6c124ddccd9c723ebb4a58fc94596b51f9aac375ab22120919f"
+}

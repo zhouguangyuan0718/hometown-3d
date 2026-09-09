@@ -10,10 +10,13 @@ const scale = JSON.parse(await readFile('src/walk-scale.json', 'utf8'));
 const grid = new WalkGrid(data);
 const start = () => ({ x: data.spawn[0], y: data.spawn[1], z: data.spawn[2] });
 
-test('standing eye height is calibrated to the 1.8 m lower-yard door', () => {
+test('standing eye height retains the historical scale after the blue door is resized', () => {
   assert.equal(scale.modelSha256, info.web.sha256);
   assert.equal(scale.sourceModelSha256, info.source.sha256);
   assert.equal(scale.referenceHeightMeters, 1.8);
+  assert.equal(scale.calibrationSourceModelSha256, 'ff6ac2a452e7e6c124ddccd9c723ebb4a58fc94596b51f9aac375ab22120919f');
+  assert.equal(scale.referenceHeightUnits, 3.0700000524520874);
+  assert.equal(scale.unitsPerMeter, 3.0700000524520874 / 1.8);
   assert.equal(data.eyeHeightMeters, 1.62);
   assert(Math.abs(data.eyeHeight / scale.referenceHeightUnits - 1.62 / 1.8) < 1e-9);
   assert(Math.abs(data.eyeHeight / data.unitsPerMeter - 1.62) < 1e-9);

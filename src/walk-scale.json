@@ -1,5 +1,5 @@
 {
-  "reference": "下院瓦房的蓝色双扇门，六块门板的整体高度",
+  "reference": "历史 v42 下院蓝门六块门板；v43 修改门板后仍沿用此标定",
   "referenceObjects": [
     "v13_旧蓝门板_01",
     "v13_旧蓝门板_02",
@@ -8,8 +8,10 @@
     "v13_旧蓝门板_05",
     "v13_旧蓝门板_06"
   ],
-  "sourceModelSha256": "ff6ac2a452e7e6c124ddccd9c723ebb4a58fc94596b51f9aac375ab22120919f",
-  "modelSha256": "7ca12f0a7a33319edddc217ab01559b0b703942dc0cdb88da9047bb02aba5d00",
+  "calibrationSourceModelName": "老家_院门净高与旧木构修正_v42.glb",
+  "calibrationSourceModelSha256": "ff6ac2a452e7e6c124ddccd9c723ebb4a58fc94596b51f9aac375ab22120919f",
+  "sourceModelSha256": "09ee014b8b9784a87c10e6a79ee04d54ef4879a20ffbbb2f2ed17c1047117d4a",
+  "modelSha256": "7a1fb19271e6906bfdaccdc28b2680ab5b11a7ea748791300ffb46ecac62b106",
   "referenceHeightMeters": 1.8,
   "referenceHeightUnits": 3.0700000524520874,
   "unitsPerMeter": 1.705555584695604,

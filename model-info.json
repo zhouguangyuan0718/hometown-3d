@@ -1,24 +1,24 @@
 {
   "source": {
-    "name": "老家_院门净高与旧木构修正_v42.glb",
-    "bytes": 275450448,
-    "sha256": "ff6ac2a452e7e6c124ddccd9c723ebb4a58fc94596b51f9aac375ab22120919f",
+    "name": "老家_各房门含门槛总高调整_v43.glb",
+    "bytes": 275455048,
+    "sha256": "09ee014b8b9784a87c10e6a79ee04d54ef4879a20ffbbb2f2ed17c1047117d4a",
     "meshes": 1467,
     "materials": 293,
     "images": 32,
-    "triangles": 2315936,
+    "triangles": 2315958,
     "extensions": [
       "KHR_materials_specular"
     ]
   },
   "web": {
     "name": "model.glb",
-    "bytes": 34540516,
-    "sha256": "7ca12f0a7a33319edddc217ab01559b0b703942dc0cdb88da9047bb02aba5d00",
+    "bytes": 34537664,
+    "sha256": "7a1fb19271e6906bfdaccdc28b2680ab5b11a7ea748791300ffb46ecac62b106",
     "meshes": 48,
     "materials": 53,
     "images": 34,
-    "triangles": 1563206,
+    "triangles": 1563394,
     "extensions": [
       "EXT_meshopt_compression",
       "EXT_texture_webp",

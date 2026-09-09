@@ -1,7 +1,8 @@
-"""Calibrate the walk camera from the user-supplied 1.8 m lower-yard door.
+"""Bind the current model to the frozen historical blue-door calibration.
 
 python3 scripts/calibrate-walk-scale.py /path/to/source.glb
-The six original door boards are in baked glTF world coordinates.
+v43 changes those boards. Never derive a new scale from their edited height.
+walk-scale-reference.json records the measurement from the original v42 GLB.
 """
 import json
 import hashlib
@@ -16,27 +17,21 @@ with Path(sys.argv[1]).open('rb') as f:
     chunk_length, chunk_kind = struct.unpack('<II', f.read(8))
     assert chunk_kind == 0x4E4F534A
     document = json.loads(f.read(chunk_length))
-names = [f'v13_旧蓝门板_{i:02d}' for i in range(1, 7)]
-nodes = [n for n in document['nodes'] if n.get('name') in names]
-assert len(nodes) == 6
-bounds = []
-for node in nodes:
-    assert not any(k in node for k in ('translation', 'rotation', 'scale', 'matrix')), 'Reference door must use baked coordinates'
-    for primitive in document['meshes'][node['mesh']]['primitives']:
-        accessor = document['accessors'][primitive['attributes']['POSITION']]
-        bounds.append((accessor['min'][1], accessor['max'][1]))
-door_height_units = max(b[1] for b in bounds) - min(b[0] for b in bounds)
-door_height_meters = 1.8  # User's reference dimension, not inferred from Blender units.
+reference = json.loads((root / 'scripts/walk-scale-reference.json').read_text())
+door_height_units = reference['referenceHeightUnits']
+door_height_meters = reference['referenceHeightMeters']
 units_per_meter = door_height_units / door_height_meters
 info = json.loads((root / 'model-info.json').read_text())
 digest = hashlib.sha256()
 with Path(sys.argv[1]).open('rb') as f:
     for chunk in iter(lambda: f.read(1024 * 1024), b''):
         digest.update(chunk)
-assert digest.hexdigest() == info['source']['sha256'], 'Calibration source must match model-info.json'
+assert digest.hexdigest() == info['source']['sha256'], 'Current model must match model-info.json'
 data = {
-    'reference': '下院瓦房的蓝色双扇门，六块门板的整体高度',
-    'referenceObjects': names,
+    'reference': reference['reference'],
+    'referenceObjects': reference['referenceObjects'],
+    'calibrationSourceModelName': reference['referenceModelName'],
+    'calibrationSourceModelSha256': reference['referenceModelSha256'],
     'sourceModelSha256': info['source']['sha256'],
     'modelSha256': info['web']['sha256'],
     'referenceHeightMeters': door_height_meters,
