@@ -24,9 +24,19 @@ try {
     assert.equal(start.walk.eyeHeightMeters, 1.62);
     await page.screenshot({ path: `artifacts/walk-${name}-gate.png` });
     if (!mobile) {
-      await page.keyboard.down('w'); await page.waitForTimeout(2200); await page.keyboard.up('w');
+      await page.keyboard.down('w');
+      for (let sample = 0; sample < 22; sample++) {
+        await page.waitForTimeout(100);
+        const passingGate = (await diagnostics(page)).walk;
+        // Floor-following damping creates small transient height differences on
+        // uneven ground; the old low beam lowered the view by over 6 cm.
+        assert(Math.abs(passingGate.currentEyeHeight - scale.eyeHeightUnits) < 0.02 * scale.unitsPerMeter, 'The raised gate must preserve standing eye height throughout passage');
+      }
+      await page.keyboard.up('w');
+      await page.waitForTimeout(500);
       const inside = await diagnostics(page);
       assert(inside.walk.position[2] < 10.6, 'W must take the walker through the open gate');
+      assert(Math.abs(inside.walk.currentEyeHeight - scale.eyeHeightUnits) < 0.0011, 'Standing eye height must settle after walking stops');
       await page.screenshot({ path: `artifacts/walk-${name}-inside.png` });
       await page.keyboard.down('a'); await page.waitForTimeout(1000); await page.keyboard.up('a');
       const atWall = await diagnostics(page);

@@ -1,6 +1,6 @@
-"""Run in background Blender against the original v41 scene; never save it.
+"""Run in background Blender against the source scene; never save it.
 
-blender -b /path/to/v41.blend --python scripts/build-walk-map.py
+blender -b /path/to/source.blend --python scripts/build-walk-map.py
 The navigation grid uses glTF coordinates (x, Blender z, -Blender y).
 """
 import bpy

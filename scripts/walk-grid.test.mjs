@@ -20,8 +20,10 @@ test('standing eye height is calibrated to the 1.8 m lower-yard door', () => {
   assert.equal(grid.eyeHeight(data.spawn[0], data.spawn[2]), data.eyeHeight);
 });
 
-test('low overhead geometry caps eye height locally and open courtyards restore it', () => {
-  assert(data.eyeLimits.length > 0, 'The low courtyard gate should be detected');
+test('overhead geometry caps eye height locally and open courtyards restore it', () => {
+  const lowCeiling = new WalkGrid({ width: 2, depth: 1, cell: 1, origin: [0, 0], eyeHeight: 2.7, rows: [[[0, [0, 0]]]], eyeLimits: [[0, 2400]] });
+  assert.equal(lowCeiling.eyeHeight(0, 0), 2.4);
+  assert.equal(lowCeiling.eyeHeight(1, 0), 2.7);
   for (const [index, millimetres] of data.eyeLimits) {
     const col = index % data.width, row = Math.floor(index / data.width);
     const x = data.origin[0] + col * data.cell, z = data.origin[1] + row * data.cell;
@@ -31,6 +33,15 @@ test('low overhead geometry caps eye height locally and open courtyards restore 
   }
   assert.equal(grid.eyeHeight(4.2, 4.2), data.eyeHeight);
   assert.equal(grid.eyeHeight(3, -6), data.eyeHeight);
+});
+
+test('the raised courtyard gate permits continuous walking at full calibrated eye height', () => {
+  const position = start();
+  for (let z = position.z; z >= 8.5; z -= 0.06) {
+    grid.move(position, 0, z - position.z);
+    assert(Math.abs(position.z - z) < 0.001, 'The doorway must remain passable');
+    assert.equal(grid.eyeHeight(position.x, position.z), data.eyeHeight, 'The raised gate must not force the camera to duck');
+  }
 });
 
 function pathTo(x, z) {
