@@ -75,8 +75,8 @@ export class WalkControls {
     this.clearInput();
     this.position.fromArray(this.grid.data.spawn);
     this.yaw = this.grid.data.spawnYaw;
-    this.pitch = 0.02;
-    this.eyeY = this.position.y + this.grid.data.eyeHeight;
+    this.pitch = 0;
+    this.eyeY = this.position.y + this.grid.eyeHeight(this.position.x, this.position.z);
     this.camera.fov = 70;
     this.camera.near = 0.025;
     this.camera.far = 300;
@@ -87,7 +87,10 @@ export class WalkControls {
   exit() { this.active = false; this.clearInput(); }
 
   applyView(delta) {
-    const desiredY = this.position.y + this.grid.data.eyeHeight;
+    const localHeight = this.grid.eyeHeight(this.position.x, this.position.z);
+    const desiredY = this.position.y + localHeight;
+    // Clamp below nearby overhead geometry before easing back up into the yard.
+    if (localHeight < this.grid.data.eyeHeight) this.eyeY = Math.min(this.eyeY, desiredY);
     if (delta) this.eyeY = MathUtils.damp(this.eyeY, desiredY, 14, delta);
     this.camera.position.set(this.position.x, this.eyeY, this.position.z);
     this.rotation.set(this.pitch, this.yaw, 0);
@@ -110,10 +113,10 @@ export class WalkControls {
       const dz = (-Math.cos(this.yaw) * forward - Math.sin(this.yaw) * right) * speed;
       moved = this.grid.move(this.position, dx, dz);
     }
-    if (moved || turn || Math.abs(this.eyeY - this.position.y - this.grid.data.eyeHeight) > 0.001) this.applyView(delta);
+    if (moved || turn || Math.abs(this.eyeY - this.position.y - this.grid.eyeHeight(this.position.x, this.position.z)) > 0.001) this.applyView(delta);
   }
 
   diagnostics() {
-    return { active: this.active, position: this.position.toArray(), yaw: this.yaw, pitch: this.pitch, eyeHeight: this.grid.data.eyeHeight, cell: this.grid.cell(this.position.x, this.position.z) };
+    return { active: this.active, position: this.position.toArray(), yaw: this.yaw, pitch: this.pitch, eyeHeight: this.grid.data.eyeHeight, eyeHeightMeters: this.grid.data.eyeHeightMeters, currentEyeHeight: this.eyeY - this.position.y, cell: this.grid.cell(this.position.x, this.position.z) };
   }
 }

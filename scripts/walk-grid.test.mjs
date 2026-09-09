@@ -6,8 +6,32 @@ import { WalkGrid } from '../src/walk-grid.js';
 const data = JSON.parse(await readFile('src/walk-data.json', 'utf8'));
 await mkdir('artifacts', { recursive: true });
 const info = JSON.parse(await readFile('model-info.json', 'utf8'));
+const scale = JSON.parse(await readFile('src/walk-scale.json', 'utf8'));
 const grid = new WalkGrid(data);
 const start = () => ({ x: data.spawn[0], y: data.spawn[1], z: data.spawn[2] });
+
+test('standing eye height is calibrated to the 1.8 m lower-yard door', () => {
+  assert.equal(scale.modelSha256, info.web.sha256);
+  assert.equal(scale.sourceModelSha256, info.source.sha256);
+  assert.equal(scale.referenceHeightMeters, 1.8);
+  assert.equal(data.eyeHeightMeters, 1.62);
+  assert(Math.abs(data.eyeHeight / scale.referenceHeightUnits - 1.62 / 1.8) < 1e-9);
+  assert(Math.abs(data.eyeHeight / data.unitsPerMeter - 1.62) < 1e-9);
+  assert.equal(grid.eyeHeight(data.spawn[0], data.spawn[2]), data.eyeHeight);
+});
+
+test('low overhead geometry caps eye height locally and open courtyards restore it', () => {
+  assert(data.eyeLimits.length > 0, 'The low courtyard gate should be detected');
+  for (const [index, millimetres] of data.eyeLimits) {
+    const col = index % data.width, row = Math.floor(index / data.width);
+    const x = data.origin[0] + col * data.cell, z = data.origin[1] + row * data.cell;
+    assert(grid.eyeHeight(x, z) < data.eyeHeight);
+    assert.equal(grid.eyeHeight(x, z), millimetres / 1000);
+    assert(grid.eyeHeight(x, z) >= scale.minEyeHeightMeters * scale.unitsPerMeter - 0.001);
+  }
+  assert.equal(grid.eyeHeight(4.2, 4.2), data.eyeHeight);
+  assert.equal(grid.eyeHeight(3, -6), data.eyeHeight);
+});
 
 function pathTo(x, z) {
   const [sc, sr] = grid.cell(data.spawn[0], data.spawn[2]);

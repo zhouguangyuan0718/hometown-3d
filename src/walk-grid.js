@@ -5,6 +5,7 @@ export class WalkGrid {
     this.data = data;
     this.heights = new Int16Array(data.width * data.depth).fill(32767);
     data.rows.forEach((runs, row) => runs.forEach(([start, values]) => this.heights.set(values, row * data.width + start)));
+    this.eyeLimits = new Map(data.eyeLimits || []);
   }
 
   cell(x, z) {
@@ -22,6 +23,12 @@ export class WalkGrid {
   sample(x, z, previousHeight) {
     const height = this.height(...this.cell(x, z));
     return height !== null && Math.abs(height - previousHeight) <= this.data.maxStep + 0.001 ? height : null;
+  }
+
+  eyeHeight(x, z) {
+    const [col, row] = this.cell(x, z);
+    const limit = this.eyeLimits.get(row * this.data.width + col);
+    return limit === undefined ? this.data.eyeHeight : Math.min(this.data.eyeHeight, limit / 1000);
   }
 
   step(position, dx, dz) {

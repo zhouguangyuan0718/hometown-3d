@@ -1,11 +1,12 @@
 import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 
 const url = process.argv[2] || 'http://127.0.0.1:4173/';
 const browser = await chromium.launch({ channel: 'chrome', args: ['--enable-unsafe-swiftshader'] });
 await mkdir('artifacts', { recursive: true });
 const results = [];
+const scale = JSON.parse(await readFile('src/walk-scale.json', 'utf8'));
 const diagnostics = page => page.evaluate(() => window.viewerDiagnostics());
 try {
   for (const mobile of [false, true]) {
@@ -19,7 +20,8 @@ try {
     await page.locator('#app.walking').waitFor();
     const start = await diagnostics(page);
     assert(start.walk.active);
-    assert(Math.abs(start.camera[1] - start.walk.position[1] - 1.62) < 0.001);
+    assert(Math.abs(start.camera[1] - start.walk.position[1] - scale.eyeHeightUnits) < 0.001);
+    assert.equal(start.walk.eyeHeightMeters, 1.62);
     await page.screenshot({ path: `artifacts/walk-${name}-gate.png` });
     if (!mobile) {
       await page.keyboard.down('w'); await page.waitForTimeout(2200); await page.keyboard.up('w');

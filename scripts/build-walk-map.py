@@ -41,11 +41,15 @@ CELL = 0.12
 X0, Z0 = -12.6, -19.2
 WIDTH, DEPTH = 236, 330
 RADIUS = 0.19
-EYE_HEIGHT = 1.62
+SCALE = json.loads((ROOT / 'src/walk-scale.json').read_text())
+EYE_HEIGHT = SCALE['eyeHeightUnits']
+MIN_EYE_HEIGHT = SCALE['minEyeHeightMeters'] * SCALE['unitsPerMeter']
+HEAD_MARGIN = SCALE['headMarginMeters'] * SCALE['unitsPerMeter']
 MAX_STEP = 0.42
 DOWN, UP = Vector((0, -1, 0)), Vector((0, 1, 0))
 EMPTY = 32767
 heights = [EMPTY] * (WIDTH * DEPTH)
+eye_limits = {}
 
 def floor_at(x, z):
     # Courtyard / doorway / stair surfaces are below +0.15. This excludes roofs.
@@ -67,13 +71,19 @@ for row in range(DEPTH):
         if floor is None:
             continue
         # Check the body's vertical clearance and width against real surfaces.
-        hit = tree.ray_cast(Vector((x, floor + 0.25, z)), UP, EYE_HEIGHT)
-        if hit[0] is not None:
+        # Preserve low-door passage by lowering the view only where overhead
+        # geometry requires it; ordinary courtyard eye height stays calibrated.
+        available_eye = EYE_HEIGHT
+        for dx, dz in ((0, 0), (RADIUS, 0), (-RADIUS, 0), (0, RADIUS), (0, -RADIUS)):
+            hit = tree.ray_cast(Vector((x + dx, floor + 0.5, z + dz)), UP, EYE_HEIGHT + HEAD_MARGIN)
+            if hit[0] is not None:
+                available_eye = min(available_eye, hit[0].y - floor - HEAD_MARGIN)
+        if available_eye < MIN_EYE_HEIGHT:
             continue
         obstructed = False
         # Start above a climbable riser plus body radius: testing a sphere at
         # knee height would wrongly block the front edge of every stair tread.
-        for dy in (MAX_STEP + RADIUS + 0.05, 1.05, 1.48):
+        for dy in (MAX_STEP + RADIUS + 0.05, 1.05, 1.48, 2.0, available_eye - RADIUS):
             nearest = tree.find_nearest(Vector((x, floor + dy, z)), RADIUS)
             if nearest[0] is not None:
                 obstructed = True
@@ -87,7 +97,10 @@ for row in range(DEPTH):
                 obstructed = True
                 break
         if not obstructed:
-            heights[row * WIDTH + col] = round(floor * 1000)
+            index = row * WIDTH + col
+            heights[index] = round(floor * 1000)
+            if available_eye < EYE_HEIGHT:
+                eye_limits[index] = math.floor(available_eye * 1000)
     if row % 60 == 0:
         print('NAV row', row, 'time', round(time.monotonic()-START, 1), flush=True)
 
@@ -126,7 +139,8 @@ for row in range(DEPTH):
             runs.append([first, run]); run, first = [], None
     rows.append(runs)
 info = json.loads((ROOT / 'model-info.json').read_text())
-data = {'version': 1, 'modelSha256': info['web']['sha256'], 'cell': CELL, 'origin': [X0, Z0], 'width': WIDTH, 'depth': DEPTH, 'eyeHeight': EYE_HEIGHT, 'maxStep': MAX_STEP, 'radius': RADIUS, 'spawn': spawn, 'spawnYaw': 0, 'rows': rows}
+assert SCALE['modelSha256'] == info['web']['sha256']
+data = {'version': 2, 'modelSha256': info['web']['sha256'], 'cell': CELL, 'origin': [X0, Z0], 'width': WIDTH, 'depth': DEPTH, 'eyeHeight': EYE_HEIGHT, 'eyeHeightMeters': SCALE['eyeHeightMeters'], 'unitsPerMeter': SCALE['unitsPerMeter'], 'maxStep': MAX_STEP, 'radius': RADIUS, 'spawn': spawn, 'spawnYaw': 0, 'rows': rows, 'eyeLimits': [[i, eye_limits[i]] for i in sorted(eye_limits) if i in reachable]}
 (ROOT / 'src/walk-data.json').write_text(json.dumps(data, separators=(',', ':')) + '\n')
 report = {'source': bpy.data.filepath, 'objects': objects, 'triangles': len(triangles), 'gridSize': [WIDTH, DEPTH], 'reachableCells': len(reachable), 'spawn': spawn, 'heightRange': [min(heights[i] for i in reachable)/1000, max(heights[i] for i in reachable)/1000], 'timeSeconds': round(time.monotonic()-START, 2)}
 (ROOT / 'artifacts/walk-map-report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2))
