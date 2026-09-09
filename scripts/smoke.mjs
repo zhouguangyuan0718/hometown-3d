@@ -1,0 +1,63 @@
+import { chromium } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+
+const url = process.argv[2] || 'http://127.0.0.1:4173/';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader'] });
+await mkdir('artifacts', { recursive: true });
+const report = [];
+try {
+  for (const [name, viewport, isMobile] of [['desktop', { width: 1440, height: 1000 }, false], ['mobile', { width: 390, height: 844 }, true]]) {
+    const context = await browser.newContext({ viewport, isMobile, hasTouch: isMobile, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('response', response => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
+    const start = Date.now();
+    await page.goto(url);
+    await page.locator('#app[data-loaded="true"]').waitFor({ timeout: 180000 });
+    await page.waitForTimeout(2000);
+    const initial = await page.evaluate(() => window.viewerDiagnostics());
+    assert(initial.triangles > 1000, 'Model must render geometry');
+    assert(initial.calls > 0, 'Model must issue draw calls');
+    await page.screenshot({ path: `artifacts/${name}.png` });
+    await page.locator('#top').click();
+    await page.waitForTimeout(300);
+    const top = await page.evaluate(() => window.viewerDiagnostics());
+    assert.notDeepEqual(top.camera, initial.camera, 'Top view must move camera');
+    await page.screenshot({ path: `artifacts/${name}-top.png` });
+    await page.locator('#home').click();
+    await page.mouse.move(viewport.width / 2, viewport.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(viewport.width / 2 + 80, viewport.height / 2 + 25, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    const dragged = await page.evaluate(() => window.viewerDiagnostics());
+    assert.notDeepEqual(dragged.camera, initial.camera, 'Drag must rotate camera');
+    await page.mouse.wheel(0, -160);
+    await page.waitForTimeout(300);
+    const zoomed = await page.evaluate(() => window.viewerDiagnostics());
+    assert.notDeepEqual(zoomed.camera, dragged.camera, 'Wheel must zoom');
+    await page.locator('#rotate').click();
+    await page.waitForTimeout(500);
+    assert(await page.evaluate(() => window.viewerDiagnostics().autoRotate));
+    await page.locator('#home').click();
+    assert.equal(await page.evaluate(() => window.viewerDiagnostics().autoRotate), false);
+    await page.locator('#share').click();
+    await page.locator('#share-dialog').waitFor({ state: 'visible' });
+    assert(await page.locator('#share-dialog img').evaluate(img => img.complete && img.naturalWidth > 0));
+    await page.locator('#close-share').click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'No horizontal overflow');
+    assert.deepEqual(errors, []);
+    report.push({ name, url, elapsedMs: Date.now() - start, ...initial, errors });
+    await context.close();
+  }
+  const page = await browser.newPage();
+  await page.route('**/model.glb', route => route.abort());
+  await page.goto(url);
+  await page.locator('#retry').waitFor({ state: 'visible', timeout: 30000 });
+  assert.equal(await page.locator('#home').isDisabled(), true);
+  report.push({ failureRecovery: 'passed' });
+  await writeFile('artifacts/smoke-report.json', JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(report, null, 2));
+} finally { await browser.close(); }

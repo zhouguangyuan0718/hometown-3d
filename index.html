@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#eeebe4" />
+  <meta name="description" content="转一转，回老家看看。一个可以自由旋转、放大，走近细节的老家院落三维模型。" />
+  <title>老家 · 院落里的时光</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233e5045'/%3E%3Cpath d='M12 31 32 14 52 31M18 29v22h28V29M28 51V36h9v15' fill='none' stroke='%23f7f3e9' stroke-width='4'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <main id="app">
+    <div id="viewport" aria-label="老家院落三维模型，拖动旋转，滚轮缩放"></div>
+    <header class="masthead">
+      <div><p class="eyebrow">一座院子 · 一段时光</p><h1>老家<span>院落里的时光</span></h1></div>
+      <button id="share" class="round-button" aria-label="分享这个模型" title="分享"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M5 13v7h14v-7"/></svg></button>
+    </header>
+    <div class="view-label"><span class="dot"></span><span id="view-name">院落全景</span></div>
+    <section id="loading" class="loading" role="status" aria-live="polite">
+      <div class="loading-card"><p class="eyebrow">回家的路上</p><h2 id="loading-title">正在打开院落</h2><p id="loading-detail">首次打开需要下载模型，请稍候。</p><progress id="progress" max="100" value="0" aria-label="模型加载进度"></progress><button id="retry" hidden>重新加载</button></div>
+    </section>
+    <footer>
+      <p class="gesture-hint"><span class="desktop-hint">拖动旋转 · 滚轮缩放 · 右键平移</span><span class="mobile-hint">单指旋转 · 双指缩放 / 平移</span></p>
+      <nav class="toolbar" aria-label="模型查看工具">
+        <button id="home" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M6 9v12h12V9M10 21v-7h4v7"/></svg><span>全景</span></button>
+        <button id="top" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 6-9 6-9-6 9-6ZM3 14l9 6 9-6"/></svg><span>俯视</span></button>
+        <i></i>
+        <button id="rotate" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 7M20 4v7h-7"/></svg><span>自动旋转</span></button>
+        <button id="fullscreen" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg><span>全屏</span></button>
+      </nav>
+      <p class="caption">依据老家照片复原 · 部分细节为推测还原</p>
+    </footer>
+    <dialog id="share-dialog"><button id="close-share" class="close" aria-label="关闭分享">×</button><p class="eyebrow">把老家分享给你</p><h2>一起回院子看看</h2><img src="./qr.png" width="220" height="220" alt="扫码打开老家三维模型" /><p>手机扫码，或把链接发给亲友</p><button id="copy-link" class="primary">复制分享链接</button><p id="copy-status" role="status"></p></dialog>
+    <p id="toast" role="status" hidden></p>
+    <noscript>请启用浏览器 JavaScript，以查看可旋转的三维模型。</noscript>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
