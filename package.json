@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --test scripts/walk-grid.test.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "node scripts/check-model.mjs && vite build --base=./",
     "preview": "vite preview --host 127.0.0.1"

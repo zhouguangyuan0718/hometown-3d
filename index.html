@@ -16,6 +16,17 @@
       <button id="share" class="round-button" aria-label="分享这个模型" title="分享"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M5 13v7h14v-7"/></svg></button>
     </header>
     <div class="view-label"><span class="dot"></span><span id="view-name">院落全景</span></div>
+    <div id="walk-hud" hidden>
+      <span class="crosshair" aria-hidden="true">+</span>
+      <div id="walk-pad" aria-label="步行方向控制">
+        <button data-move="forward" aria-label="向前走" title="向前走">↑</button>
+        <button data-move="left" aria-label="向左走" title="向左走">←</button>
+        <span aria-hidden="true">步行</span>
+        <button data-move="right" aria-label="向右走" title="向右走">→</button>
+        <button data-move="back" aria-label="向后走" title="向后走">↓</button>
+      </div>
+      <span class="look-hint">拖动画面 · 转头看四周</span>
+    </div>
     <section id="loading" class="loading" role="status" aria-live="polite">
       <div class="loading-card"><p class="eyebrow">回家的路上</p><h2 id="loading-title">正在打开院落</h2><p id="loading-detail">首次打开需要下载模型，请稍候。</p><progress id="progress" max="100" value="0" aria-label="模型加载进度"></progress><button id="retry" hidden>重新加载</button></div>
     </section>
@@ -24,6 +35,8 @@
       <nav class="toolbar" aria-label="模型查看工具">
         <button id="home" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M6 9v12h12V9M10 21v-7h4v7"/></svg><span>全景</span></button>
         <button id="top" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 6-9 6-9-6 9-6ZM3 14l9 6 9-6"/></svg><span>俯视</span></button>
+        <button id="walk" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="m7 21 4-7 3 3v4M5 11l5-4 4 2 4 3M11 8l-1 6"/></svg><span>步行</span></button>
+        <button id="gate" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5l8-2 8 2v16M4 5l8 2v14M12 7l8-2M8 12v3m8-3v3"/></svg><span>回到门口</span></button>
         <i></i>
         <button id="rotate" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 7M20 4v7h-7"/></svg><span>自动旋转</span></button>
         <button id="fullscreen" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg><span>全屏</span></button>

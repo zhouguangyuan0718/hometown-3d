@@ -21,6 +21,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test
       - run: pnpm build
       - name: Stamp source revision
         run: printf '%s\n' "$GITHUB_SHA" > dist/revision.txt

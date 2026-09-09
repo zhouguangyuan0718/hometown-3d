@@ -10,7 +10,7 @@ import modelInfo from '../model-info.json';
 const $ = (id) => document.getElementById(id);
 const app = $('app');
 const loading = $('loading');
-const buttons = ['home', 'top', 'rotate'].map($);
+const buttons = ['home', 'top', 'rotate', 'walk'].map($);
 buttons.forEach((button) => { button.disabled = true; });
 $('retry').addEventListener('click', () => location.reload());
 function failure(message) {
@@ -76,11 +76,26 @@ function startViewer() {
   const sun = new THREE.DirectionalLight(0xfff1d7, 2.6);
   sun.position.set(-10, 25, 18); scene.add(sun);
   let size, center, ready = false, dirty = true;
+  let walker = null;
+  let enteringWalk = false;
   let lastFrame = 0;
-  const setActiveView = (id) => ['home', 'top'].forEach((name) => { $(name).classList.toggle('active', name === id); $(name).setAttribute('aria-pressed', String(name === id)); });
+  const setActiveView = (id) => ['home', 'top', 'walk'].forEach((name) => { $(name).classList.toggle('active', name === id); $(name).setAttribute('aria-pressed', String(name === id)); });
   function stopRotation() { controls.autoRotate = false; $('rotate').classList.remove('active'); $('rotate').setAttribute('aria-pressed', 'false'); }
+  function leaveWalk() {
+    if (!walker?.active) return;
+    walker.exit();
+    controls.enabled = true;
+    app.classList.remove('walking');
+    $('walk-hud').hidden = true;
+    $('gate').hidden = true;
+    camera.fov = 38;
+    $('viewport').setAttribute('aria-label', '老家院落三维模型，拖动旋转，滚轮缩放');
+    document.querySelector('.desktop-hint').textContent = '拖动旋转 · 滚轮缩放 · 右键平移';
+    document.querySelector('.mobile-hint').textContent = '单指旋转 · 双指缩放 / 平移';
+  }
   function fit(view = 'home') {
     if (!ready) return;
+    leaveWalk();
     stopRotation();
     const aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
     const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
@@ -119,6 +134,40 @@ function startViewer() {
   controls.addEventListener('start', () => { stopRotation(); setActiveView(null); $('view-name').textContent = '自由探索'; });
   $('home').addEventListener('click', () => fit('home'));
   $('top').addEventListener('click', () => fit('top'));
+  $('walk').addEventListener('click', async () => {
+    if (!ready || enteringWalk) return;
+    if (walker?.active) { fit(); return; }
+    enteringWalk = true;
+    $('walk').disabled = true;
+    try {
+      if (!walker) {
+        const [{ WalkControls }, { default: data }] = await Promise.all([import('./walk-controls.js'), import('./walk-data.json')]);
+        if (data.modelSha256 !== modelInfo.web.sha256) throw new Error('Navigation data does not match the model');
+        walker = new WalkControls({ camera, canvas: renderer.domElement, pad: $('walk-pad'), data, invalidate: () => { dirty = true; }, paused: () => dialog.open || document.hidden });
+      }
+      stopRotation();
+      controls.enabled = false;
+      // Flush OrbitControls' damping before handing the camera to walk controls.
+      controls.enableDamping = false; controls.update(); controls.enableDamping = true;
+      walker.enter();
+      app.classList.add('walking');
+      $('walk-hud').hidden = false;
+      $('gate').hidden = false;
+      setActiveView('walk');
+      $('view-name').textContent = '院门口 · 步行漫游';
+      $('viewport').setAttribute('aria-label', '步行漫游，WASD 或方向键走动，拖动画面转头');
+      document.querySelector('.desktop-hint').textContent = 'WASD / 方向键走动 · 拖动转头 · Q / E 转向 · Esc 退出';
+      document.querySelector('.mobile-hint').textContent = '按住方向键走动 · 拖动画面转头';
+      dirty = true;
+    } catch (error) {
+      console.error(error);
+      $('toast').textContent = '步行模式暂未加载成功，请稍后再试。';
+      $('toast').hidden = false;
+      setTimeout(() => { $('toast').hidden = true; }, 4000);
+    } finally { enteringWalk = false; $('walk').disabled = false; }
+  });
+  $('gate').addEventListener('click', () => { if (walker?.active) walker.reset(); });
+  window.addEventListener('keydown', event => { if (event.key === 'Escape' && walker?.active && !dialog.open) fit(); });
   $('rotate').addEventListener('click', () => {
     controls.autoRotate = !controls.autoRotate;
     $('rotate').classList.toggle('active', controls.autoRotate);
@@ -169,12 +218,16 @@ function startViewer() {
     app.dataset.loaded = 'true';
     app.dataset.triangles = String(renderer.info.render.triangles);
     // Read-only diagnostics for publication checks.
-    window.viewerDiagnostics = () => ({ loaded: ready, triangles: renderer.info.render.triangles, calls: renderer.info.render.calls, camera: camera.position.toArray(), target: controls.target.toArray(), bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() }, autoRotate: controls.autoRotate, timing: { ...timing } });
+    window.viewerDiagnostics = () => ({ loaded: ready, triangles: renderer.info.render.triangles, calls: renderer.info.render.calls, camera: camera.position.toArray(), target: controls.target.toArray(), bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() }, autoRotate: controls.autoRotate, timing: { ...timing }, walk: walker?.diagnostics() ?? null });
   }).catch((error) => { console.error(error); failure('模型加载失败，请检查网络连接后重试。'); });
   renderer.setAnimationLoop((time) => {
     if (document.hidden) return;
     const delta = Math.min((time - lastFrame) / 1000, 0.05); lastFrame = time;
-    controls.update(delta);
+    if (walker?.active) {
+      walker.update(delta);
+      const label = walker.position.z > 10.5 ? '院门口 · 步行漫游' : walker.position.y > -1.8 ? '上院 · 步行漫游' : '下院 · 步行漫游';
+      if ($('view-name').textContent !== label) $('view-name').textContent = label;
+    } else controls.update(delta);
     if (dirty || controls.autoRotate) { renderer.render(scene, camera); dirty = false; }
   });
 }
